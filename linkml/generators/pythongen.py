@@ -164,6 +164,16 @@ dataclasses._init_fn = dataclasses_init_fn_with_kwargs
 # Namespaces
 {self.gen_namespaces()}
 
+# Helper
+def _instantiate(v, base_type):
+    if isinstance(v, base_type):
+        return v
+    else:
+        obj = as_dict(v)
+        if "@type" in obj:
+            type_name = obj.pop('@type')
+            base_type = globals()[type_name]
+        return base_type(**obj)
 
 # Types
 {self.gen_typedefs()}
@@ -812,7 +822,7 @@ dataclasses._init_fn = dataclasses_init_fn_with_kwargs
                     )
                 else:
                     rlines.append(
-                        f"\tself.{aliased_slot_name} = {base_type_name}(**as_dict(self.{aliased_slot_name}))"
+                        f"\tself.{aliased_slot_name} = _instantiate(self.{aliased_slot_name}, {base_type_name})"
                     )
         elif slot.inlined:
             slot_range_cls = self.schema.classes[slot.range]
@@ -853,7 +863,7 @@ dataclasses._init_fn = dataclasses_init_fn_with_kwargs
                 rlines.append(f"if not isinstance({sn}, list):")
                 rlines.append(f"\t{sn} = [{sn}] if {sn} is not None else []")
                 rlines.append(
-                    f"{sn} = [v if isinstance(v, {base_type_name}) else {base_type_name}(**as_dict(v)) for v in {sn}]"
+                    f"{sn} = [_instantiate(v, {base_type_name}) for v in {sn}]"
                 )
         else:
             # Multivalued and not inlined
